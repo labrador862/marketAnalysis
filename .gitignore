@@ -1,1 +1,5 @@
-ECHO is on.
+# API keys
+.env
+
+# Created data files
+.csv
