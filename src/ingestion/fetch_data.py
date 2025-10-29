@@ -21,11 +21,11 @@ def fetch_stock_data(ticker, period, interval, auto_adjust=False):
     Parameters
     ----------
     ticker : str
-        Stock ticker symbol (e.g., "AAPL", "NVDA")
+        Stock ticker symbol (e.g., "AAPL", "NVDA").
     period : str
-        Time period of historical data to fetch (e.g., "7d", "1mo", "1y")
+        Time period of historical data to fetch (e.g., "7d", "1mo", "1y").
     interval : str
-        Frequency of data intervals (e.g., "1h", "1d")
+        Frequency of data intervals (e.g., "1h", "1d").
     auto_adjust : bool, optional
         Whether to automatically adjust prices for corporate actions such as 
         stock splits and dividends. If True (default), all OHLC values are adjusted and
@@ -68,7 +68,7 @@ def fetch_news(ticker):
     Parameters
     ----------
     ticker : str
-        Stock ticker symbol (e.g., "AAPL", "NVDA")
+        Stock ticker symbol (e.g., "AAPL", "NVDA").
     """
     try: 
         key = os.getenv("NEWS_API_KEY")
@@ -98,7 +98,7 @@ def fetch_news(ticker):
 
 if __name__ == "__main__":
     # Settings
-    tickers =  ["VTI", "VGT", "NVDA"]
+    tickers =  ["NVDA"]
     period = "7d"
     interval = "1h" 
     

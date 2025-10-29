@@ -1,5 +1,45 @@
-# API keys
+# environment files
 .env
+*.env
 
-# Created data files
-.csv
+# python cache and bytecode
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# system files
+.DS_Store
+Thumbs.db
+
+# data files
+*.csv
+
+# logs and temp files
+*.log
+*.tmp
+
+# notebook checkpoints
+.ipynb_checkpoints/
+
+# model artifacts
+# future-proofing for ML models
+*.pkl
+*.joblib
+*.h5
+*.pt
+*.onnx
+
+# reports or exports
+*.pdf
+*.html
+
+# ide / editor configs
+.vscode/
+.idea/
