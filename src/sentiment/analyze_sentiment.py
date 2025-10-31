@@ -20,12 +20,17 @@ def load_finbert():
     return pipeline("sentiment-analysis", model="ProsusAI/finbert", device=device)
 
 def analyze_news_sentiment(df, sentiment_model):
+    """
+    TODO: output follows the form  {'label': 'negative', 'score': 0.6402074098587036}, explain this in docstring
+    """
     texts = (df["title"] + ". " + df["description"]).tolist()
     results = []
 
     for text in texts:
         try:
-            output = sentiment_model(text[:512])[0]  # truncate to FinBERT limit
+            # truncates input beyond 512 tokens (FinBERT max)
+            output = sentiment_model(text, truncation=True, max_length=512)[0]
+            print(f"debug: {output}")
             results.append(output)
         except Exception as e:
             print(f"Skipping one entry due to error: {e}")
