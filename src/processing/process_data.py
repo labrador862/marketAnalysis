@@ -109,9 +109,20 @@ def clean_news_data(file_path):
     df.dropna(subset=["title", "description", "url"], inplace=True)
     df.drop_duplicates(subset=["url"], inplace=True)
     
-    # clean text formatting for NLP, remove unnecessary whitespace characters
-    df["title"] = df["title"].str.strip()
-    df["description"] = df["description"].str.replace(r"\s+", " ", regex=True)
+    # clean text formatting for NLP
+    df["title"] = (
+        df["title"]
+        .fillna("")     # replace NaN with empty string
+        .astype(str)    # ensure string dtype
+        .str.strip()    # remove leading/trailing whitespace
+    )
+    df["description"] = (
+        df["description"]
+        .fillna("")     # replace NaN with empty string
+        .astype(str)    # ensure string dtype
+        .str.replace(r"\s+", " ", regex=True) # collapse whitespace
+        .str.strip()    # remove leading/trailing whitespace
+    )
 
     # give the DataFrame a clean index, ensures clean and continuous
     # row labeling after sorting/dropping
