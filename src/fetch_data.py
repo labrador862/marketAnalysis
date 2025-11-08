@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 from datetime import datetime
 
 # path setup
-ROOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 RAW_DATA_DIR = os.path.join(ROOT_DIR, "data", "raw")
 os.makedirs(RAW_DATA_DIR, exist_ok=True)
 

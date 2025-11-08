@@ -4,7 +4,7 @@ from datetime import datetime
 from langdetect import detect, LangDetectException
 
 # path setup
-ROOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 RAW_DATA_DIR = os.path.join(ROOT_DIR, "data", "raw")
 PROCESSED_DATA_DIR = os.path.join(ROOT_DIR, "data", "processed")
 os.makedirs(PROCESSED_DATA_DIR, exist_ok=True)
@@ -13,8 +13,7 @@ def filter_english_articles(df):
     """
     Remove non-English articles from the data.
     
-    Parameters
-    ----------
+    Parameters:
     df : pandas.DataFrame
         The input news DataFrame containing a 'description' column.
     
