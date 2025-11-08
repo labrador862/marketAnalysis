@@ -69,20 +69,41 @@ def analyze_news_sentiment(df, sentiment_model):
             output = sentiment_model(text, truncation=True, max_length=512)[0]
             print(f"debug: {output}")
             results.append(output)
+        # if df does not include 'title' or 'description', default this row to sentiment score of 0.0
         except Exception as e:
             print(f"Skipping one entry due to error: {e}")
             results.append({"label": "neutral", "score": 0.0})
 
+    # grab label and score from result list and append to df
     df["sentiment_label"] = [r["label"] for r in results]
     df["sentiment_score"] = [r["score"] for r in results]
 
-    # convert labels to numeric polarity for averaging
+    # apply weight to each label (-1 to 1) for averaging
     label_map = {"positive": 1, "neutral": 0, "negative": -1}
     df["sentiment_value"] = df["sentiment_label"].map(label_map) * df["sentiment_score"]
 
     return df
 
 def aggregate_daily_sentiment(df):
+    """
+    Aggregate article sentiment scores into daily averages.
+    
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        DataFrame containing a 'publishedAt' datetime column and
+        'sentiment_value' numeric column.
+    
+    Returns
+    -------
+    pandas.DataFrame
+        DataFrame with one row per date containing:
+        - 'date' : datetime.date
+        - 'avg_sentiment' : float
+            Mean sentiment value across all articles that day.
+        - 'article_count' : int
+            Number of articles contributing to that day's sentiment.
+    """
     df["date"] = pd.to_datetime(df["publishedAt"], utc=True).dt.date
     aggregated = (
         df.groupby("date")["sentiment_value"]
@@ -93,6 +114,17 @@ def aggregate_daily_sentiment(df):
     return aggregated
 
 def save_results(aggregated_df, raw_filename):
+    """
+    Save daily aggregated sentiment data to data/sentiment/ with
+    a standardized, timestamped filename.
+
+    Parameters
+    ----------
+    aggregated_df : pandas.DataFrame
+        Daily sentiment averages produced by 'aggregate_daily_sentiment'.
+    raw_filename : str
+        Original processed input filename (e.g. 'NVDA_news_processed_2025-10-29_00-05.csv').
+    """
     prefix = raw_filename.split("_")[0]  # grab ticker
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M")
     filename = f"{prefix}_sentiment_{timestamp}.csv"
@@ -101,6 +133,23 @@ def save_results(aggregated_df, raw_filename):
     print(f"Saved sentiment data: {filename}")
     
 def save_results_by_article(df, raw_filename):
+    """
+    Save individual article-level sentiment outputs to data/sentiment/
+    as a readable CSV for qualitative inspection. 
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        DataFrame returned by 'analyze_news_sentiment'.
+    raw_filename : str
+        Original processed input filename (e.g. 'NVDA_news_processed_2025-10-29_00-05.csv').
+        
+    Notes
+    -----
+    - Columns included: ['date', 'author', 'title', 'sentiment_label', 'sentiment_score'].
+    - Sentiment scores are rounded to two decimals.
+    - Dates are standardized to UTC calendar dates.
+    """
     prefix = raw_filename.split("_")[0]  # grab ticker
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M")
     filename = f"{prefix}_sentiment_by_article_{timestamp}.csv"
@@ -115,10 +164,19 @@ def save_results_by_article(df, raw_filename):
     print(f"Saved sentiment data by article: {filename}")
 
 def main(input_path):
+    """
+    Orchestrate the full sentiment analysis pipeline:
+    load model, analyze articles, save results (daily and/or by article).
+
+    Parameters
+    ----------
+    input_path : str
+        Path to the processed news CSV file from data/processed/.
+    """
     df = pd.read_csv(input_path)
     model = load_finbert()
     df = analyze_news_sentiment(df, model)
-    save_results_by_article(df, os.path.basename(input_path))
+    save_results_by_article(df, os.path.basename(input_path)) # optional
     aggregated_df = aggregate_daily_sentiment(df)
     save_results(aggregated_df, os.path.basename(input_path))
 
