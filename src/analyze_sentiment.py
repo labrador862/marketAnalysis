@@ -42,8 +42,7 @@ def analyze_news_sentiment(df, sentiment_model):
     sentiment_model : transformers.pipelines.text_classification.TextClassificationPipeline
         Preloaded FinBERT model pipeline.
     
-    Returns
-    -------
+    Returns:
     pandas.DataFrame
         Original DataFrame with additional columns:
             - 'sentiment_label' : str
@@ -94,8 +93,7 @@ def aggregate_daily_sentiment(df):
         DataFrame containing a 'publishedAt' datetime column and
         'sentiment_value' numeric column.
     
-    Returns
-    -------
+    Returns:
     pandas.DataFrame
         DataFrame with one row per date containing:
         - 'date' : datetime.date
@@ -104,12 +102,18 @@ def aggregate_daily_sentiment(df):
         - 'article_count' : int
             Number of articles contributing to that day's sentiment.
     """
-    df["date"] = pd.to_datetime(df["publishedAt"], utc=True).dt.date
+    # ensure datetime type
+    df["date"] = pd.to_datetime(df["publishedAt"], utc=True)
+    # if an article was published before market close on a given day, it belongs to that day.
+    # if an article was published after market close on a given day, it belongs to the next day.
+    # this is important to prevent temporal leakage (lookahead bias)
+    df["date"] = df["date"].apply(
+        lambda x: (x + pd.Timedelta(days=1)).date() if x.hour >= 16 else x.date()
+    )
+    
     aggregated = (
-        df.groupby("date")["sentiment_value"]
-        .agg(["mean", "count"])
-        .rename(columns={"mean": "avg_sentiment", "count": "article_count"})
-        .reset_index()
+        df.groupby("date", as_index=False)
+        .agg(avg_sentiment=("sentiment_value", "mean"), article_count=("sentiment_value", "size"))
     )
     return aggregated
 
