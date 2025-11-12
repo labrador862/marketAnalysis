@@ -3,7 +3,7 @@ import requests
 import yfinance as yf
 import pandas as pd
 from dotenv import load_dotenv
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 
 # path setup
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -74,9 +74,16 @@ def fetch_news(ticker):
         key = os.getenv("NEWS_API_KEY")
         if not key:
             raise ValueError("Missing NEWS_API_KEY in .env file")
-
-        # check for recent articles pertaining to the current ticker
-        url = f"https://newsapi.org/v2/everything?q={ticker}&sortBy=publishedAt&apiKey={key}"
+        
+        # define time window
+        to_date = datetime.now(timezone.utc)
+        from_date = to_date - timedelta(days=14)
+        
+        # check for articles within the window
+        url = (
+            f"https://newsapi.org/v2/everything?q={ticker}&from={from_date.date()}"
+            f"&to={to_date.date()}&sortBy=publishedAt&apiKey={key}&pageSize=100"
+        )
         response = requests.get(url, timeout=10) # wait up to 10s for response
         response.raise_for_status() # check for bad response
         
@@ -99,7 +106,7 @@ def fetch_news(ticker):
 if __name__ == "__main__":
     # Settings
     tickers =  ["NVDA"]
-    period = "7d"
+    period = "14d"
     interval = "1h" 
     
     # Execution
