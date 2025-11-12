@@ -74,31 +74,44 @@ def fetch_news(ticker):
         key = os.getenv("NEWS_API_KEY")
         if not key:
             raise ValueError("Missing NEWS_API_KEY in .env file")
-        
-        # define time window
-        to_date = datetime.now(timezone.utc)
-        from_date = to_date - timedelta(days=14)
+        now = datetime.now(timezone.utc)
+        all_articles = []
         
         # check for articles within the window
-        url = (
-            f"https://newsapi.org/v2/everything?q={ticker}&from={from_date.date()}"
-            f"&to={to_date.date()}&sortBy=publishedAt&apiKey={key}&pageSize=100"
-        )
-        response = requests.get(url, timeout=10) # wait up to 10s for response
-        response.raise_for_status() # check for bad response
+        for offset in range(0, 28, 7):
+            to_date = now - timedelta(days=offset)  # number of days before today
+            from_date = to_date - timedelta(days=7) # 7 days prior to to_date value
+            url = (
+                f"https://newsapi.org/v2/everything?"
+                f"q={ticker}&from={from_date.date()}&to={to_date.date()}"
+                f"&language=en&sortBy=publishedAt&pageSize=100&page=1&apiKey={key}"
+            )
+            response = requests.get(url, timeout=10) # wait up to 10s for response
+            
+            #debug
+            print(response.json().get("totalResults"))
+            response.raise_for_status() # check for bad response
+            articles = response.json().get("articles", [])
+            if not articles:
+                break # stop if no more results
+            
+            all_articles.extend(articles) # add articles from current page to total
+            print(f"Fetched {len(articles)} from {from_date.date()} to {to_date.date()}.")
         
-        articles = response.json().get("articles", [])
-        if not articles:
+        if not all_articles:
             print(f"No news found for {ticker}.")
             return
         
-        df = pd.DataFrame(articles)
+        df = pd.DataFrame(all_articles)
+        if not df.empty:
+            print(f"Articles date range: {df['publishedAt'].min()} → {df['publishedAt'].max()}")
+
         
         # create timestamp for versioning
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M")
         filename = f"{ticker}_news_{timestamp}.csv"
         df.to_csv(os.path.join(RAW_DATA_DIR, filename), index=False)
-        print(f"Saved news data for {ticker}")
+        print(f"Saved news data ({len(df)} articles) for {ticker}.")
         
     except Exception as e:
         print(f"Failed to fetch news for {ticker}: {e}")
