@@ -4,17 +4,18 @@ feature_engineer.py
 Feature Engineering & Labeling
 
 This module merges processed price and sentiment data into a unified dataset 
-suitable for machine learning. It creates lagged and rolling sentiment features, 
-computes daily price-based features, and generates binary classification labels 
+suitable for machine learning. It creates lagged, rolling and technical indictator-based
+features, such as moving averages, RSI, and volatility, and generates binary classification labels 
 representing the next day's price direction.
 
 Example:
-    python feature_engineer.py --price data/processed/NVDA_prices_processed_2025-10-29_00-05.csv \
+    python features.py --price data/processed/NVDA_prices_processed_2025-10-29_00-05.csv \
                                --sentiment data/processed/NVDA_sentiment_2025-10-30_22-11.csv
 """
 import os
 import argparse
 import pandas as pd
+import numpy as np
 
 def load_data(price_path: str, sentiment_path: str) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
@@ -48,32 +49,58 @@ def merge_data(prices: pd.DataFrame, sentiment: pd.DataFrame) -> pd.DataFrame:
     Returns:
         pd.DataFrame: Merged DataFrame aligned by date.
     """
-    # debug
-    print(prices.columns)
-    print(sentiment.columns)
-    print("=== PRICE DATES SAMPLE ===")
-    print(prices["date"].head(), prices["date"].dtype)
-    print("=== SENTIMENT DATES SAMPLE ===")
-    print(sentiment["date"].head(), sentiment["date"].dtype)
-    print("Unique dates in prices:", prices["date"].nunique())
-    print("Unique dates in sentiment:", sentiment["date"].nunique())
-    common_dates = set(prices["date"]).intersection(set(sentiment["date"]))
-    print("Common date count:", len(common_dates))
-
-
     merged = pd.merge(prices, sentiment, on="date", how="inner")
-    # debug
-    print("Merged shape:", merged.shape)
-    print(merged)
-
     merged.sort_values("date", inplace=True)
     merged.reset_index(drop=True, inplace=True)
     
     return merged
 
+def compute_moving_averages(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Compute common moving averages: 5, 10, and 20 day.
+    """
+    df["ma_5"] = df["Close"].rolling(5).mean()
+    df["ma_10"] = df["Close"].rolling(10).mean()
+    df["ma_20"] = df["Close"].rolling(20).mean()
+    return df
+
+def compute_rsi(df: pd.DataFrame, period: int = 14) -> pd.DataFrame:
+    """
+    Compute 14-day RSI using standard Wilder smoothing.
+    """
+    delta = df["Close"].diff()
+    gain = delta.where(delta > 0, 0).rolling(period).mean()
+    loss = -delta.where(delta < 0, 0).rolling(period).mean()
+    rs = gain / loss
+    df["rsi_14"] = 100 - (100 / (1 + rs))
+    return df
+
+def compute_volatility(df: pd.DataFrame, window: int = 14) -> pd.DataFrame:
+    """
+    Rolling volatility (std of 1-day returns).
+    """
+    df["volatility_14"] = df["return_1d"].rolling(window).std()
+    return df
+
+def compute_price_ranges(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Compute intraday price range features.
+    """
+    df["range_high_low"] = df["High"] - df["Low"]
+    df["range_open_close"] = df["Close"] - df["Open"]
+    df["range_hl_pct"] = (df["High"] - df["Low"]) / df["Close"]
+    return df
+
 def create_features(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Create lagged, rolling, and price-based features for model input.
+    Create all engineered features:
+        - returns (1d, 5d)
+        - volume change
+        - moving averages
+        - RSI
+        - volatility
+        - price ranges
+        - sentiment lags and rolling
 
     Parameters
     ----------
@@ -89,9 +116,16 @@ def create_features(df: pd.DataFrame) -> pd.DataFrame:
     df["return_1d"] = df["Close"].pct_change()
     df["return_5d"] = df["Close"].pct_change(5)
 
-    # Change in volume traded in past day
+    # Volume change (past day)
     df["volume_change"] = df["Volume"].pct_change()
+    
+    # Technical indicators
+    df = compute_moving_averages(df)
+    df = compute_rsi(df)
+    df = compute_volatility(df)
+    df = compute_price_ranges(df)
 
+    # Sentiment lags
     # Shift average sentiment and num articles for a given day to
     # the next day such that yesterday's news impacts today's analysis
     df["sentiment_lag1"] = df["avg_sentiment"].shift(1)
@@ -153,7 +187,6 @@ def main():
     print("Final shape before save:", df.shape)
 
     save_features(df, os.path.basename(args.prices).split("_")[0])
-
 
 if __name__ == "__main__":
     main()
