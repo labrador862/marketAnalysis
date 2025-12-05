@@ -101,6 +101,8 @@ def clean_news_data(file_path):
     # parse publication timestamps and convert to timezone-aware datetime object
     if "publishedAt" in df.columns:
         df["publishedAt"] = pd.to_datetime(df["publishedAt"], errors="coerce", utc=True)
+        df.rename(columns={"publishedAt": "date"}, inplace=True)
+        df["date"] = df["date"].dt.date
 
     # drop incomplete or duplicate rows; title and description
     # are critical for sentiment analysis
