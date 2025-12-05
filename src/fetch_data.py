@@ -111,8 +111,8 @@ def fetch_news(ticker):
 if __name__ == "__main__":
     # Settings
     tickers =  ["NVDA"]
-    period = "1mo"
-    interval = "1h" 
+    period = "2y"
+    interval = "1d" 
     
     # Execution
     for ticker in tickers:
