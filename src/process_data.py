@@ -9,35 +9,6 @@ RAW_DATA_DIR = os.path.join(ROOT_DIR, "data", "raw")
 PROCESSED_DATA_DIR = os.path.join(ROOT_DIR, "data", "processed")
 os.makedirs(PROCESSED_DATA_DIR, exist_ok=True)
 
-def filter_english_articles(df):
-    """
-    Remove non-English articles from the data.
-    
-    Parameters:
-    df : pandas.DataFrame
-        The input news DataFrame containing a 'description' column.
-    
-    Returns:
-    pandas.DataFrame
-        DataFrame consisting of only English articles.
-    """
-    mask = [] # boolean mask
-    for text in df["description"].fillna(""):
-        # append only English articles to the mask
-        try:
-            mask.append(detect(text) == "en")
-        except LangDetectException:
-            mask.append(False)
-    
-    # summary for logging
-    filtered_df = df[mask]
-    total = len(df)
-    kept = len(filtered_df)
-    percent = (kept / total * 100)
-    print(f"Filtered English articles: {kept} / {total} ({percent:.1f}%)")
-    
-    return df[mask]
-
 def clean_stock_data(file_path):
     """
     Load and clean a raw stock price CSV. This includes datetime parsing, 
@@ -79,7 +50,7 @@ def clean_stock_data(file_path):
 def clean_news_data(file_path):
     """
     Load and clean a raw news CSV. Performs column extraction, 
-    text cleanup, duplicate removal, and language filtering.
+    text cleanup, and duplicate removal.
     
     Parameters
     ----------
@@ -91,7 +62,6 @@ def clean_news_data(file_path):
         Cleaned and standardized news data.
     """
     df = pd.read_csv(file_path)
-    df = filter_english_articles(df)
     
     # extract publisher name
     if "source" in df.columns:
