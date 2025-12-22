@@ -62,7 +62,7 @@ def fetch_stock_data(ticker, period, interval, auto_adjust=False):
 
 def fetch_news(ticker):
     """
-    Fetch recent news articles related to a ticker using NewsAPI and save them
+    Fetch recent news articles related to a ticker using NewsData.io and save them
     as a timestamped CSV under data/raw/.
     
     Parameters
@@ -71,40 +71,85 @@ def fetch_news(ticker):
         Stock ticker symbol (e.g., "AAPL", "NVDA").
     """
     try: 
-        key = os.getenv("NEWS_API_KEY")
+        key = os.getenv("NEWS_DATA_IO_KEY")
         if not key:
-            raise ValueError("Missing NEWS_API_KEY in .env file")
-        now = datetime.now(timezone.utc)
+            raise ValueError("Missing NEWS_DATA_IO_KEY in .env file")
+
+        years = 5
+        max_pages = 1000
+        base_url = "https://newsdata.io/api/1/news"
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=years*365)
         
         all_articles = []
-        # manually check for relevant articles in the past month one week at a time
-        for offset in range(0, 28, 7):
-            to_date = now - timedelta(days=offset)  # number of days before today
-            from_date = to_date - timedelta(days=7) # 7 days prior to to_date value
-            url = (
-                f"https://newsapi.org/v2/everything?"
-                f"q={ticker}&from={from_date.date()}&to={to_date.date()}"
-                f"&language=en&sortBy=publishedAt&pageSize=100&page=1&apiKey={key}"
-            )
-            response = requests.get(url, timeout=10) # wait up to 10s for response
-            response.raise_for_status() # check for bad response
-            articles = response.json().get("articles", [])
-            if articles:
-                all_articles.extend(articles) # add articles from current page to total
-                print(f"Fetched {len(articles)} articles from {from_date.date()} to {to_date.date()}.")
+        next_page = None
+        page_count = 0
         
-        if not all_articles:
-            print(f"No news found for {ticker}.")
-            return
-        
-        df = pd.DataFrame(all_articles)
+        seen_urls = set()
+        all_articles = []
 
-        # create timestamp for versioning
-        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M")
-        filename = f"{ticker}_news_{timestamp}.csv"
-        df.to_csv(os.path.join(RAW_DATA_DIR, filename), index=False)
-        print(f"Saved news data ({len(df)} articles) for {ticker}.")
-        
+        current_end = datetime.now(timezone.utc)
+        cutoff_date = current_end - timedelta(days=365 * years)
+
+        while current_end > cutoff_date:
+            current_start = current_end - timedelta(days=30)
+
+            next_page = None
+            page_count = 0
+
+            while page_count < max_pages:
+                params = {
+                    "apikey": key,
+                    "q": ticker,
+                    "language": "en",
+                    "from_date": current_start.date().isoformat(),
+                    "to_date": current_end.date().isoformat(),
+                }
+
+                if next_page:
+                    params["page"] = next_page
+
+                response = requests.get(base_url, params=params, timeout=10)
+                response.raise_for_status()
+                data = response.json()
+
+                articles = data.get("results", [])
+                if not articles:
+                    break
+
+                for article in articles:
+                    link = article.get("link")
+                    if not link or link in seen_urls:
+                        continue
+
+                    seen_urls.add(link)
+
+                    published = pd.to_datetime(
+                        article.get("pubDate"), utc=True, errors="coerce"
+                    )
+                    if pd.isna(published):
+                        continue
+
+                    creator = article.get("creator")
+                    author = creator[0] if isinstance(creator, list) and creator else None
+
+                    all_articles.append({
+                        "author": author,
+                        "title": article.get("title"),
+                        "description": article.get("description"),
+                        "url": link,
+                        "publishedAt": published.isoformat(),
+                        "source": article.get("source_id"),
+                    })
+
+                next_page = data.get("nextPage")
+                if not next_page:
+                    break
+
+                page_count += 1
+
+            # move window backward
+            current_end = current_start
+
     except Exception as e:
         print(f"Failed to fetch news for {ticker}: {e}")
 

@@ -3,57 +3,30 @@ feature_engineer.py
 
 Feature Engineering & Labeling
 
-This module merges processed price and sentiment data into a unified dataset 
-suitable for machine learning. It creates lagged, rolling and technical indictator-based
-features, such as moving averages, RSI, and volatility, and generates binary classification labels 
+This module creates lagged, rolling and technical indictator-based features, 
+such as moving averages, RSI, and volatility, and generates binary classification labels 
 representing the next day's price direction.
 
 Example:
-    python features.py --price data/processed/NVDA_prices_processed_2025-10-29_00-05.csv \
-                               --sentiment data/processed/NVDA_sentiment_2025-10-30_22-11.csv
+    python features.py --prices data/processed/NVDA_prices_processed_2025-10-29_00-05.csv
 """
 import os
 import argparse
 import pandas as pd
-import numpy as np
 
-def load_data(price_path: str, sentiment_path: str) -> tuple[pd.DataFrame, pd.DataFrame]:
+def load_data(price_path: str) -> pd.DataFrame:
     """
-    Load processed price and sentiment CSV files.
+    Load processed price CSV files.
 
     Parameters
     ----------
     price_path : str
         Path to the processed prices CSV.
-    sentiment_path : str
-        Path to the processed sentiment CSV.
-
     Returns:
-        tuple[pd.DataFrame, pd.DataFrame]: Loaded price and sentiment DataFrames.
+        pd.DataFrame: Loaded price DataFrame.
     """
     prices = pd.read_csv(price_path)
-    sentiment = pd.read_csv(sentiment_path)
-    return prices, sentiment
-
-def merge_data(prices: pd.DataFrame, sentiment: pd.DataFrame) -> pd.DataFrame:
-    """
-    Merge price and sentiment data on the 'date' column.
-
-    Parameters
-    ----------
-        prices : pd.DataFrame
-            Processed price data with daily OHLCV values.
-        sentiment : pd.DataFrame
-            Daily sentiment data with 'avg_sentiment' and 'article_count' columns.
-
-    Returns:
-        pd.DataFrame: Merged DataFrame aligned by date.
-    """
-    merged = pd.merge(prices, sentiment, on="date", how="inner")
-    merged.sort_values("date", inplace=True)
-    merged.reset_index(drop=True, inplace=True)
-    
-    return merged
+    return prices
 
 def compute_moving_averages(df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -100,12 +73,11 @@ def create_features(df: pd.DataFrame) -> pd.DataFrame:
         - RSI
         - volatility
         - price ranges
-        - sentiment lags and rolling
 
     Parameters
     ----------
     df : pd.DataFrame
-        Merged price + sentiment DataFrame.
+        Price DataFrame.
 
     Returns
     -------
@@ -124,15 +96,6 @@ def create_features(df: pd.DataFrame) -> pd.DataFrame:
     df = compute_rsi(df)
     df = compute_volatility(df)
     df = compute_price_ranges(df)
-
-    # Sentiment lags
-    # Shift average sentiment and num articles for a given day to
-    # the next day such that yesterday's news impacts today's analysis
-    df["sentiment_lag1"] = df["avg_sentiment"].shift(1)
-    df["article_count_lag1"] = df["article_count"].shift(1)
-
-    # Three day rolling sentiment averages 
-    df["sentiment_rolling3"] = df["avg_sentiment"].rolling(3).mean().shift(1)
 
     return df
 
@@ -173,14 +136,12 @@ def main():
     """
     Main entry point for the feature engineering pipeline.
     """
-    parser = argparse.ArgumentParser(description="Merge sentiment and price data for ML feature generation.")
+    parser = argparse.ArgumentParser(description="Feature Engineering Pipeline")
     parser.add_argument("--prices", required=True, help="Path to processed prices CSV.")
-    parser.add_argument("--sentiment", required=True, help="Path to processed sentiment CSV.")
     args = parser.parse_args()
 
-    prices, sentiment = load_data(args.prices, args.sentiment)
-    df = merge_data(prices, sentiment)
-    df = create_features(df)
+    prices = load_data(args.prices)
+    df = create_features(prices)
     df = create_labels(df)
     
     # debug

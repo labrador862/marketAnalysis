@@ -47,55 +47,6 @@ def clean_stock_data(file_path):
     
     return df
 
-def clean_news_data(file_path):
-    """
-    Load and clean a raw news CSV. Performs column extraction, 
-    text cleanup, and duplicate removal.
-    
-    Parameters
-    ----------
-    file_path : str
-        Absolute path to the raw stock price CSV file.
-        
-    Returns:
-    pandas.DataFrame
-        Cleaned and standardized news data.
-    """
-    df = pd.read_csv(file_path)
-    
-    # extract publisher name
-    if "source" in df.columns:
-        df["source_name"] = df["source"].astype(str).str.extract(r"'name': '([^']+)'", expand=False)
-        df.drop(columns=["source"], inplace=True, errors="ignore")
-
-    # parse publication timestamps and convert to timezone-aware datetime object
-    if "publishedAt" in df.columns:
-        df["publishedAt"] = pd.to_datetime(df["publishedAt"], errors="coerce", utc=True)
-        df.rename(columns={"publishedAt": "date"}, inplace=True)
-        df["date"] = df["date"].dt.date
-
-    # drop incomplete or duplicate rows; title and description
-    # are critical for sentiment analysis
-    df.dropna(subset=["title", "description", "url"], inplace=True)
-    df.drop_duplicates(subset=["url"], inplace=True)
-    
-    # clean text formatting for NLP
-    for col in ["author", "title", "description"]:
-        df[col] = (
-            df[col]
-            .fillna("")     # replace NaN with empty string
-            .astype(str)    # ensure string dtype
-            .str.replace(r"[\r\n]+", " ", regex=True)  # replace newlines with space
-            .str.replace(r"\s+", " ", regex=True) # collapse whitespace
-            .str.strip()    # remove leading/trailing whitespace
-    )
-
-    # give the DataFrame a clean index, ensures clean and continuous
-    # row labeling after sorting/dropping
-    df.reset_index(drop=True, inplace=True)
-    
-    return df
-
 def save_processed_data(df, raw_filename):
     """
     Save a cleaned DataFrame to data/processed/ with a timestamped filename.
@@ -105,9 +56,9 @@ def save_processed_data(df, raw_filename):
     df : DataFrame
         The cleaned DataFrame (stock or news).
     raw_filename : str
-        Original raw CSV filename, e.g. 'NVDA_news_2025-10-28_23-32.csv'.
+        Original raw CSV filename, e.g. 'NVDA_prices_2025-10-28_23-32.csv'.
     """
-    # extract base prefirm and create timestamp for versioning
+    # extract base prefix and create timestamp for versioning
     prefix = raw_filename.split("_")[0] + "_" + raw_filename.split("_")[1]
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M")
     filename = f"{prefix}_processed_{timestamp}.csv"
@@ -117,14 +68,7 @@ def save_processed_data(df, raw_filename):
 
 if __name__ == "__main__":
     for file in os.listdir(RAW_DATA_DIR):
-        # ensure only CSVs are processed
-        if file.endswith(".csv"):
-            path = os.path.join(RAW_DATA_DIR, file)
-            # identify stock or news data, clean respectively
-            if "prices" in file:
-                df = clean_stock_data(path)
-                save_processed_data(df, file.replace(".csv", ""))
-            elif "news" in file:
-                df = clean_news_data(path)
-                save_processed_data(df, file.replace(".csv", ""))
+        path = os.path.join(RAW_DATA_DIR, file)
+        df = clean_stock_data(path)
+        save_processed_data(df, file.replace(".csv", ""))
 
