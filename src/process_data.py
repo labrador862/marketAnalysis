@@ -27,12 +27,12 @@ def clean_stock_data(file_path):
     
     # convert Datetime from str to pandas datetime64 value and rename to 'date',
     # important naming style for consistency
-    df.rename(columns={"Datetime": "date"}, inplace=True)
-    df["date"] = pd.to_datetime(df["date"], utc=True).dt.date
+    df.rename(columns={"Datetime": "Date"}, inplace=True)
+    df["Date"] = pd.to_datetime(df["Date"], utc=True).dt.date
 
     # sort in chronological order, important for time-series operations later
-    df.sort_values("date", inplace=True)
-    df.drop_duplicates(subset=["date"], inplace=True)
+    df.sort_values("Date", inplace=True)
+    df.drop_duplicates(subset=["Date"], inplace=True)
     
     # convert all values in each column to a numeric dtype (e.g., float64, int64)
     # errors="coerce" turns unparsable values into NaN
