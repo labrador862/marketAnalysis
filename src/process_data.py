@@ -1,7 +1,6 @@
 import os
 import pandas as pd
 from datetime import datetime
-from langdetect import detect, LangDetectException
 
 # path setup
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

@@ -8,11 +8,16 @@ such as moving averages, RSI, and volatility, and generates binary classificatio
 representing the next day's price direction.
 
 Example:
-    python features.py --prices data/processed/NVDA_prices_processed_2025-10-29_00-05.csv
+    python features.py
 """
 import os
-import argparse
 import pandas as pd
+
+# path setup
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PROCESSED_DATA_DIR = os.path.join(ROOT_DIR, "data", "processed")
+FEATURES_DIR = os.path.dirname(os.path.join(ROOT_DIR, "data", "features"))
+os.makedirs(FEATURES_DIR, exist_ok=True)
 
 def load_data(price_path: str) -> pd.DataFrame:
     """
@@ -136,18 +141,12 @@ def main():
     """
     Main entry point for the feature engineering pipeline.
     """
-    parser = argparse.ArgumentParser(description="Feature Engineering Pipeline")
-    parser.add_argument("--prices", required=True, help="Path to processed prices CSV.")
-    args = parser.parse_args()
-
-    prices = load_data(args.prices)
-    df = create_features(prices)
-    df = create_labels(df)
-    
-    # debug
-    print("Final shape before save:", df.shape)
-
-    save_features(df, os.path.basename(args.prices).split("_")[0])
+    for file in os.listdir(PROCESSED_DATA_DIR):
+        path = os.path.join(PROCESSED_DATA_DIR, file)
+        df = load_data(path)
+        df = create_features(df)
+        df = create_labels(df)
+        save_features(df, os.path.basename(path).split("_")[0])
 
 if __name__ == "__main__":
     main()
