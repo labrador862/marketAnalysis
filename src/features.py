@@ -146,7 +146,7 @@ def save_features(df: pd.DataFrame, output_prefix: str) -> None:
         df (pd.DataFrame): Fully engineered feature DataFrame.
         output_prefix (str): Filename prefix.
     """
-    df.fillna(0, inplace=True)
+    df.dropna().reset_index(drop=True)
     os.makedirs("data/features", exist_ok=True) # create folder if necessary
 
     output_path = f"data/features/{output_prefix}_features.csv"
