@@ -53,7 +53,7 @@ def save_processed_data(df, raw_filename):
     Parameters
     ----------
     df : DataFrame
-        The cleaned DataFrame (stock or news).
+        The cleaned stock DataFrame.
     raw_filename : str
         Original raw CSV filename, e.g. 'NVDA_prices_2025-10-28_23-32.csv'.
     """

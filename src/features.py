@@ -47,10 +47,28 @@ def compute_rsi(df: pd.DataFrame, period: int = 14) -> pd.DataFrame:
     Compute 14-day RSI using standard Wilder smoothing.
     """
     delta = df["Close"].diff()
-    gain = delta.where(delta > 0, 0).rolling(period).mean()
-    loss = -delta.where(delta < 0, 0).rolling(period).mean()
-    rs = gain / loss
-    df["rsi_14"] = 100 - (100 / (1 + rs))
+    
+    gain = delta.clip(lower=0)
+    loss = -delta.clip(upper=0)
+    
+    avg_gain = gain.rolling(window=period).mean()
+    avg_loss = loss.rolling(window=period).mean()
+    
+    # Wilder smoothing
+    for i in range(period, len(df)):
+        avg_gain.iat[i] = (avg_gain.iat[i - 1] * (period - 1) + gain.iat[i]) / period
+        avg_loss.iat[i] = (avg_loss.iat[i - 1] * (period - 1) + loss.iat[i]) / period
+        
+    # edge case: zero loss period - avoid division by zero and inf values
+    rs = avg_gain / avg_loss.replace(0, pd.NA)
+    rsi = 100 - (100 / (1 + rs))
+    
+    # handle cases where avg_loss is zero
+    rsi.loc[(avg_loss == 0) & (avg_gain > 0)] = 100 # heavy gains
+    rsi.loc[(avg_loss == 0) & (avg_gain == 0)] = 50 # neutral momentum
+
+    df["rsi_14"] = rsi
+
     return df
 
 def compute_volatility(df: pd.DataFrame, window: int = 14) -> pd.DataFrame:

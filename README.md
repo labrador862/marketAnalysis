@@ -1,9 +1,9 @@
 compute_rsi() - Relative Strength Index (RSI) and Wilder Smoothing Explained
 
 RSI is a bounded momentum oscillator (0-100) that measures the relative strength of recent price gains versus losses, where:
-RSI ~70 or greater -> strong upward momentum
+RSI ~70 or greater -> strong positive momentum
 RSI ~50 -> neutral momentum
-RSI ~30 or lower -> strong downward momentum
+RSI ~30 or lower -> strong negative momentum
 
 Variable explanations
 
